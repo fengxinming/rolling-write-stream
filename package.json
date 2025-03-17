@@ -1,0 +1,47 @@
+{
+  "name": "rolling-write-stream",
+  "version": "1.0.0",
+  "description": "rolling-write-stream",
+  "main": "index.js",
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run --coverage",
+    "eslint": "eslint --ext .js,.mjs,.jsx,.ts,.tsx --fix --ignore-path .eslintignore ./",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "rolling",
+    "stream"
+  ],
+  "author": "Jesse Feng <fxm0016@126.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fengxinming/rolling-write-stream.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fengxinming/rolling-write-stream/issues"
+  },
+  "homepage": "https://github.com/fengxinming/rolling-write-stream#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^19.2.0",
+    "@commitlint/config-conventional": "^19.1.0",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "18",
+    "@vitest/coverage-v8": "^3.0.8",
+    "eslint": "^8.57.0",
+    "eslint-config-fe": "^2.1.2",
+    "eslint-plugin-simple-import-sort": "^12.1.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "tinyglobby": "^0.2.12",
+    "vite": "^6.2.2",
+    "vite-plugin-external": "^6.0.1",
+    "vitest": "^3.0.8"
+  },
+  "dependencies": {
+    "date-manip": "^2.0.3",
+    "fs-extra": "^11.3.0",
+    "proper-lockfile": "^4.1.2"
+  }
+}
