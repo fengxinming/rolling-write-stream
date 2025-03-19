@@ -61,35 +61,60 @@ export default abstract class BaseStream extends Writable {
           await this.performRoll();
         }
       }
-
-      const { currentFileStream } = this;
-      const drained = currentFileStream.write(chunk, encoding, (err) => {
-        if (err) {
-          return callback(err);
-        }
-
-        this.currentSize += byteSize;
-        // 刷新磁盘
-        // Flush to disk
-        this.handleSync(byteSize);
-        callback();
-      });
-
-      // 处理背压
-      // Handle backpressure
-      if (!drained) {
-        // 等待 drain 事件
-        // Wait for the drain event before continuing
-        currentFileStream.once('drain', callback);
-      }
     }
     catch (err) {
       callback(err as Error);
+      return;
+    }
+
+    const { currentFileStream } = this;
+
+    // 标记 callback 是否被调用过
+    // Mark whether the callback has been called
+    let callbackCalled = false;
+
+    const drained = currentFileStream.write(chunk, encoding, (err) => {
+      if (callbackCalled) {
+        return;
+      }
+
+      callbackCalled = true;
+
+      if (!err) {
+        this.currentSize += byteSize;
+
+        // 刷新磁盘
+        // Flush to disk
+        this.handleSync(byteSize);
+
+        callback();
+        return;
+      }
+
+      callback(err);
+    });
+
+    if (!drained) {
+      // 等待 drain 事件
+      // Wait for the drain event before continuing
+      currentFileStream.once('drain', () => {
+        if (callbackCalled) {
+          return;
+        }
+
+        callbackCalled = true;
+        callback();
+      });
     }
   }
 
   _final(callback: (error?: Error) => void): void {
     this.currentFileStream.end(callback);
+  }
+
+  _destroy(error: Error, callback: () => void): void {
+    this.currentFileStream.destroy(error);
+    callback();
   }
 
   protected initialize(): void {
