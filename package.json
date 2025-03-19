@@ -1,13 +1,23 @@
 {
   "name": "rolling-write-stream",
   "version": "1.0.0",
-  "description": "rolling-write-stream",
-  "main": "index.js",
+  "description": "A high-performance Node.js log rolling library supporting size-based and date-based rolling, with compression backup and multi-process safety.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "vite build",
     "test": "vitest run --coverage",
     "eslint": "eslint --ext .js,.mjs,.jsx,.ts,.tsx --fix --ignore-path .eslintignore ./",
     "prepare": "husky",
+    "prepublishOnly": "npm run build",
     "stress": "vite-node ./stress.ts"
   },
   "keywords": [
@@ -45,5 +55,8 @@
     "date-manip": "^2.0.3",
     "fs-extra": "^11.3.0",
     "proper-lockfile": "^4.1.2"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

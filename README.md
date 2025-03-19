@@ -1,6 +1,7 @@
 # rolling-write-stream
 
 [![npm package](https://nodei.co/npm/rolling-write-stream.png?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/rolling-write-stream)
+
 [![NPM version](https://img.shields.io/npm/v/rolling-write-stream.svg?style=flat)](https://npmjs.org/package/rolling-write-stream)
 [![NPM Downloads](https://img.shields.io/npm/dm/rolling-write-stream.svg?style=flat)](https://npmjs.org/package/rolling-write-stream)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen)](https://nodejs.org/)
