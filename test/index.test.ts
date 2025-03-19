@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DateRollingFileStream, RollingFileStream } from '../src';
+import { DateFileStream, FileStream } from '../src';
 
 const TEST_DIR = path.resolve('logs');
 
@@ -68,10 +68,10 @@ afterEach(async () => {
   await fs.remove(TEST_DIR);
 });
 
-describe('RollingFileStream', () => {
+describe('FileStream', () => {
   it('应该创建初始文件并写入内容', async () => {
     const filePath = path.join(TEST_DIR, 'test.log');
-    const stream = new RollingFileStream(filePath, { maxSize: 1024 });
+    const stream = new FileStream(filePath, { maxSize: 1024 });
 
     await new Promise((resolve) => {
       stream.write('test data', resolve);
@@ -86,7 +86,7 @@ describe('RollingFileStream', () => {
 
   it('达到大小时应滚动文件', async () => {
     const filePath = path.join(TEST_DIR, 'roll-test.log');
-    const stream = new RollingFileStream(filePath, {
+    const stream = new FileStream(filePath, {
       maxSize: 10,
       backups: 2,
       keepFileExt: true
@@ -127,7 +127,7 @@ describe('RollingFileStream', () => {
 
   it('应正确处理压缩', async () => {
     const filePath = path.join(TEST_DIR, 'compress-test.log');
-    const stream = new RollingFileStream(filePath, {
+    const stream = new FileStream(filePath, {
       maxSize: 10,
       backups: 1,
       compress: true,
@@ -150,7 +150,7 @@ describe('RollingFileStream', () => {
 
   it('应保留正确数量的备份文件', async () => {
     const filePath = path.join(TEST_DIR, 'backup-test.log');
-    const stream = new RollingFileStream(filePath, {
+    const stream = new FileStream(filePath, {
       maxSize: 10,
       backups: 3
     });
@@ -171,7 +171,7 @@ describe('RollingFileStream', () => {
 
   it('backups=0时应删除所有旧文件', async () => {
     const filePath = path.join(TEST_DIR, 'no-backup-test.log');
-    const stream = new RollingFileStream(filePath, {
+    const stream = new FileStream(filePath, {
       maxSize: 10,
       backups: 0
     });
@@ -192,9 +192,10 @@ describe('RollingFileStream', () => {
 
   it('maxSize=0时应禁用大小滚动', async () => {
     const filePath = path.join(TEST_DIR, 'no-size-roll-test.log');
-    const stream = new RollingFileStream(filePath, {
+    const stream = new FileStream(filePath, {
       maxSize: 0,
-      backups: 2
+      backups: 2,
+      syncThreshold: 1024 * 1024
     });
 
     await new Promise((resolve) => {
@@ -211,7 +212,7 @@ describe('RollingFileStream', () => {
   });
 });
 
-describe('DateRollingFileStream', () => {
+describe('DateFileStream', () => {
   let mockDate: Date;
 
   beforeEach(() => {
@@ -226,7 +227,7 @@ describe('DateRollingFileStream', () => {
 
   it('应按日期格式创建文件', async () => {
     const filePath = path.join(TEST_DIR, 'date-test.log');
-    const stream = new DateRollingFileStream(filePath, {
+    const stream = new DateFileStream(filePath, {
       pattern: 'YYYY-MM-DD'
     });
 
@@ -242,7 +243,7 @@ describe('DateRollingFileStream', () => {
 
   it('日期变化时应滚动文件', async () => {
     const filePath = path.join(TEST_DIR, 'daily-test.log');
-    const stream = new DateRollingFileStream(filePath, {
+    const stream = new DateFileStream(filePath, {
       pattern: 'YYYY-MM-DD',
       keepFileExt: true
     });
@@ -284,7 +285,7 @@ describe('DateRollingFileStream', () => {
 
   it('应同时处理日期和大小滚动', async () => {
     const filePath = path.join(TEST_DIR, 'combined-test.log');
-    const stream = new DateRollingFileStream(filePath, {
+    const stream = new DateFileStream(filePath, {
       pattern: 'YYYY-MM-DD',
       maxSize: 10, // 10字节触发大小滚动
       backups: 2
@@ -299,7 +300,7 @@ describe('DateRollingFileStream', () => {
       stream.write(Buffer.alloc(1), resolve);
     });
 
-    // 验证第一天备份
+    // 验证第一天备份 combined-test.log, combined-test.log.2023-01-01.1
     let files = await fs.readdir(TEST_DIR);
     expect(files.sort(dateFileNameSort)).toEqual([
       'combined-test.log', // 当前文件（1字节）
@@ -319,7 +320,7 @@ describe('DateRollingFileStream', () => {
       stream.end(resolve);
     });
 
-    // 验证最终文件
+    // 验证最终文件 combined-test.log, combined-test.log.2023-01-02.1, combined-test.log.2023-01-01.1
     files = await fs.readdir(TEST_DIR);
     expect(files.sort(dateFileNameSort)).toEqual([
       'combined-test.log', // 第二天当前文件
@@ -330,7 +331,7 @@ describe('DateRollingFileStream', () => {
 
   it('应正确处理带压缩的日期文件', async () => {
     const filePath = path.join(TEST_DIR, 'compress-date-test.log');
-    const stream = new DateRollingFileStream(filePath, {
+    const stream = new DateFileStream(filePath, {
       pattern: 'YYYY-MM-DD',
       maxSize: 10,
       compress: true
@@ -354,7 +355,7 @@ describe('DateRollingFileStream', () => {
 
   it('backups=0时应删除所有旧文件', async () => {
     const filePath = path.join(TEST_DIR, 'no-backup-test.log');
-    const stream = new DateRollingFileStream(filePath, {
+    const stream = new DateFileStream(filePath, {
       maxSize: 10,
       backups: 0
     });
@@ -375,7 +376,7 @@ describe('DateRollingFileStream', () => {
 
   it('maxSize=0时应禁用大小滚动', async () => {
     const filePath = path.join(TEST_DIR, 'no-size-roll-test.log');
-    const stream = new DateRollingFileStream(filePath, {
+    const stream = new DateFileStream(filePath, {
       maxSize: 0,
       backups: 2
     });

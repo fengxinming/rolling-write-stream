@@ -3,6 +3,7 @@
   "include": [
     "src",
     "test",
+    "stress.ts",
     "./node_modules/vite/client.d.ts",
     "./vite.config.mts"
   ]

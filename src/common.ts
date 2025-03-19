@@ -9,6 +9,8 @@ import { RollingOptions } from './typings';
 
 export function defaultOptions(): RollingOptions {
   return {
+    objectMode: false,
+    highWaterMark: 128 * 1024,
     maxSize: 0,
     backups: 1,
     compress: false,
@@ -16,7 +18,10 @@ export function defaultOptions(): RollingOptions {
     mode: 0o600,
     flags: 'a',
     keepFileExt: false,
-    fileNameSep: '.'
+    fileNameSep: '.',
+    useLock: false,
+    syncThreshold: 0,
+    syncInterval: 10000
   };
 }
 

@@ -1,12 +1,12 @@
 import { readdir } from 'node:fs/promises';
 import { join, parse, ParsedPath } from 'node:path';
 
-import BaseRollingStream from './BaseRollingStream';
+import BaseStream from './BaseStream';
 import { defaultOptions, escapeRegExp, moveFile } from './common';
 import { RollingOptions } from './typings';
 
 
-export default class RollingFileStream extends BaseRollingStream {
+export default class FileStream extends BaseStream {
   protected options!: RollingOptions;
   private readonly parsedFilePath: ParsedPath;
   private readonly filePattern: RegExp;
@@ -20,12 +20,14 @@ export default class RollingFileStream extends BaseRollingStream {
 
     this.filePattern = fixedOpts.keepFileExt
       // 匹配格式：{name}.{index}{ext}
+      // Match format: {name}.{index}{ext}
       ? new RegExp(
         `^${escapeRegExp(parsedFilePath.name)}`
               + `${escapedSep}(\\d+)`
               + `${escapeRegExp(parsedFilePath.ext)}$`
       )
       // 匹配格式：{name}{ext}.{index}
+      // Match format: {name}{ext}.{index}
       : new RegExp(
         `^${escapeRegExp(parsedFilePath.name)}`
               + `${escapeRegExp(parsedFilePath.ext)}`
@@ -38,15 +40,11 @@ export default class RollingFileStream extends BaseRollingStream {
     return defaultOptions();
   }
 
-  protected async shouldRoll(): Promise<boolean> {
-    const { maxSize } = this.options;
-    return maxSize > 0 && maxSize <= this.currentSize;
-  }
-
   protected async rotateFiles(): Promise<void> {
     const { options: { backups, compress } } = this;
 
     // 从高索引向低索引移动，避免覆盖
+    // Move from high index to low index to avoid overwriting
     for (let i = backups - 1; i >= 1; i--) {
       await moveFile(
         this.getRollingFilePath(i),
@@ -56,6 +54,7 @@ export default class RollingFileStream extends BaseRollingStream {
     }
 
     // 移动当前文件到 .1
+    // Move the current file to .1
     await moveFile(
       this.filePath,
       this.getRollingFilePath(1),
@@ -76,19 +75,31 @@ export default class RollingFileStream extends BaseRollingStream {
     }, [] as string[]);
   }
 
-  private getRollingFilePath(index: number): string {
-    const { parsedFilePath, options } = this;
-    let fileName: string;
+  private getRollingFilePath(index?: number): string {
+    const { parsedFilePath: { dir, name, ext } } = this;
+    const { fileNameSep, keepFileExt } = this.options;
 
-    if (options.keepFileExt) {
-      // 保留扩展名格式：{name}.{index}{ext}
-      fileName = `${parsedFilePath.name}${options.fileNameSep}${index}${parsedFilePath.ext}`;
+    let fullPath = join(dir, name);
+
+    // 扩展名位置处理
+    // Extension position handling
+    if (keepFileExt) {
+      // 格式：{name}.{index}{ext}
+      // Format: {name}.{index}{ext}
+      if (index !== void 0) {
+        fullPath += fileNameSep + String(index);
+      }
+      fullPath += ext;
     }
     else {
-      // 不保留扩展名格式：{name}{ext}.{index}
-      fileName = `${parsedFilePath.name}${parsedFilePath.ext}${options.fileNameSep}${index}`;
+      // 格式：{name}{ext}.{index}
+      // Format: {name}{ext}.{index}
+      fullPath += ext;
+      if (index !== void 0) {
+        fullPath += fileNameSep + String(index);
+      }
     }
 
-    return join(parsedFilePath.dir, fileName);
+    return fullPath;
   }
 }

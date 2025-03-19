@@ -1,3 +1,3 @@
-export { default as DateRollingFileStream } from './DateRollingFileStream';
-export { default as RollingFileStream } from './RollingFileStream';
+export { default as DateFileStream } from './DateFileStream';
+export { default as FileStream } from './FileStream';
 export * from './typings';
