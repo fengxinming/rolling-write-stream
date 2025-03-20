@@ -69,17 +69,7 @@ export default abstract class BaseStream extends Writable {
 
     const { currentFileStream } = this;
 
-    // 标记 callback 是否被调用过
-    // Mark whether the callback has been called
-    let callbackCalled = false;
-
-    const drained = currentFileStream.write(chunk, encoding, (err) => {
-      if (callbackCalled) {
-        return;
-      }
-
-      callbackCalled = true;
-
+    currentFileStream.write(chunk, encoding, (err) => {
       if (!err) {
         this.currentSize += byteSize;
 
@@ -88,24 +78,11 @@ export default abstract class BaseStream extends Writable {
         this.handleSync(byteSize);
 
         callback();
-        return;
       }
-
-      callback(err);
+      else {
+        callback(err);
+      }
     });
-
-    if (!drained) {
-      // 等待 drain 事件
-      // Wait for the drain event before continuing
-      currentFileStream.once('drain', () => {
-        if (callbackCalled) {
-          return;
-        }
-
-        callbackCalled = true;
-        callback();
-      });
-    }
   }
 
   _final(callback: (error?: Error) => void): void {
