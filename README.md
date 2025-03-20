@@ -9,7 +9,7 @@
 
 A high-performance Node.js log rolling library supporting size-based and date-based rolling, with compression backup and multi-process safety.
 
-## [中文](README_zh-CN) | English
+## [中文](README_zh-CN.md) | English
 
 ## Features
 

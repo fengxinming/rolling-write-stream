@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import { join, parse, ParsedPath } from 'node:path';
 
 import BaseStream from './BaseStream';
-import { defaultOptions, escapeRegExp, moveFile } from './common';
+import { escapeRegExp, moveFile } from './common';
 import { RollingOptions } from './typings';
 
 
@@ -11,10 +11,10 @@ export default class FileStream extends BaseStream {
   private readonly parsedFilePath: ParsedPath;
   private readonly filePattern: RegExp;
 
-  constructor(filePath: string, options: Partial<RollingOptions> = {}) {
+  constructor(filePath: string, options?: Partial<RollingOptions>) {
     super(filePath, options);
-    const parsedFilePath = parse(filePath);
 
+    const parsedFilePath = parse(filePath);
     const { options: fixedOpts } = this;
     const escapedSep = escapeRegExp(fixedOpts.fileNameSep);
 
@@ -34,10 +34,6 @@ export default class FileStream extends BaseStream {
               + `${escapedSep}(\\d+)$`
       );
     this.parsedFilePath = parsedFilePath;
-  }
-
-  protected getDefaultOptions(): RollingOptions {
-    return defaultOptions();
   }
 
   protected async rotateFiles(): Promise<void> {

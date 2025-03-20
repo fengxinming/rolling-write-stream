@@ -6,6 +6,8 @@ import { Writable } from 'node:stream';
 
 import { lock } from 'proper-lockfile';
 
+import { defaultOptions } from './common';
+
 type WriteStreamWithFD = WriteStream & { fd: number };
 function normalizePath(filePath: string): string {
   if (filePath.startsWith('~')) {
@@ -24,11 +26,11 @@ export default abstract class BaseStream extends Writable {
 
   constructor(
     filePath: string,
-    options: any,
+    options?: any,
   ) {
-    super(options);
+    super(options = Object.assign(defaultOptions(), options));
+    this.options = options;
     this.filePath = normalizePath(filePath);
-    this.options = Object.assign(this.getDefaultOptions(), options);
     this.initialize();
   }
 
@@ -69,17 +71,7 @@ export default abstract class BaseStream extends Writable {
 
     const { currentFileStream } = this;
 
-    // 标记 callback 是否被调用过
-    // Mark whether the callback has been called
-    let callbackCalled = false;
-
-    const drained = currentFileStream.write(chunk, encoding, (err) => {
-      if (callbackCalled) {
-        return;
-      }
-
-      callbackCalled = true;
-
+    currentFileStream.write(chunk, encoding, (err) => {
       if (!err) {
         this.currentSize += byteSize;
 
@@ -88,24 +80,11 @@ export default abstract class BaseStream extends Writable {
         this.handleSync(byteSize);
 
         callback();
-        return;
       }
-
-      callback(err);
+      else {
+        callback(err);
+      }
     });
-
-    if (!drained) {
-      // 等待 drain 事件
-      // Wait for the drain event before continuing
-      currentFileStream.once('drain', () => {
-        if (callbackCalled) {
-          return;
-        }
-
-        callbackCalled = true;
-        callback();
-      });
-    }
   }
 
   _final(callback: (error?: Error) => void): void {
@@ -222,7 +201,6 @@ export default abstract class BaseStream extends Writable {
     }
   }
 
-  protected abstract getDefaultOptions(): Record<string, any>;
   protected abstract getOldFiles(): string[] | Promise<string[]>;
   protected abstract rotateFiles(): Promise<void>;
 }
