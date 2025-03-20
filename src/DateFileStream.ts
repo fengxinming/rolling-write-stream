@@ -5,8 +5,30 @@ import { join, parse, ParsedPath } from 'node:path';
 import { compile, isAfter, parse as parseDate } from 'date-manip';
 
 import BaseStream from './BaseStream';
-import { defaultOptions, escapeRegExp, getNewDate, moveFile } from './common';
+import { escapeRegExp, getNewDate, moveFile } from './common';
 import { DateRollingOptions } from './typings';
+
+function buildFileNameRegex(opts: DateRollingOptions, parsedFilePath: ParsedPath, datePattern: string): RegExp {
+  const escapedSep = escapeRegExp(opts.fileNameSep);
+
+  return opts.keepFileExt
+  // 匹配格式：{name}.{date}.{index}{ext}
+  // Match format: {name}.{date}.{index}{ext}
+    ? new RegExp(
+      `^${escapeRegExp(parsedFilePath.name)}`
+              + `${escapedSep}${datePattern}`
+              + `${escapedSep}(\\d+)`
+              + `${escapeRegExp(parsedFilePath.ext)}$`
+    )
+  // 匹配格式：{name}{ext}.{date}.{index}
+  // Match format: {name}{ext}.{date}.{index}
+    : new RegExp(
+      `^${escapeRegExp(parsedFilePath.name)}`
+              + `${escapeRegExp(parsedFilePath.ext)}`
+              + `${escapedSep}${datePattern}`
+              + `${escapedSep}(\\d+)$`
+    );
+}
 
 const fileNameSort = (a: any[], b: any[]) => {
   // 比较日期（降序）
@@ -25,45 +47,29 @@ const fileNameSort = (a: any[], b: any[]) => {
 export default class DateFileStream extends BaseStream {
   protected readonly options!: DateRollingOptions;
   private readonly parsedFilePath: ParsedPath;
-  private readonly filePattern: RegExp;
+  private readonly fileNameMatcher: RegExp;
   private currentDate: string;
   private newDate: string;
 
-  constructor(filePath: string, options: Partial<DateRollingOptions> = {}) {
+  constructor(filePath: string, options?: Partial<DateRollingOptions>) {
+    options = Object.assign({
+      pattern: 'YYYY-MM-DD'
+    }, options);
     super(filePath, options);
-    this.currentDate = getNewDate(this.options.pattern);
+
+    const pattern = options.pattern as string;
+
+    this.currentDate = getNewDate(pattern);
     this.newDate = this.currentDate;
 
     const parsedFilePath = parse(filePath);
 
-    const { options: fixedOpts } = this;
-    const escapedSep = escapeRegExp(fixedOpts.fileNameSep);
-    const datePattern = compile(this.options.pattern).pattern;
-
-    this.filePattern = fixedOpts.keepFileExt
-      // 匹配格式：{name}.{date}.{index}{ext}
-      // Match format: {name}.{date}.{index}{ext}
-      ? new RegExp(
-        `^${escapeRegExp(parsedFilePath.name)}`
-                  + `${escapedSep}${datePattern}`
-                  + `${escapedSep}(\\d+)`
-                  + `${escapeRegExp(parsedFilePath.ext)}$`
-      )
-      // 匹配格式：{name}{ext}.{date}.{index}
-      // Match format: {name}{ext}.{date}.{index}
-      : new RegExp(
-        `^${escapeRegExp(parsedFilePath.name)}`
-                  + `${escapeRegExp(parsedFilePath.ext)}`
-                  + `${escapedSep}${datePattern}`
-                  + `${escapedSep}(\\d+)$`
-      );
+    this.fileNameMatcher = buildFileNameRegex(
+      this.options,
+      parsedFilePath,
+      compile(pattern).pattern
+    );
     this.parsedFilePath = parsedFilePath;
-  }
-
-  protected getDefaultOptions(): DateRollingOptions {
-    return Object.assign(defaultOptions(), {
-      pattern: 'YYYY-MM-DD'
-    });
   }
 
   protected async shouldRoll(chunkSize: number): Promise<boolean> {
@@ -114,12 +120,12 @@ export default class DateFileStream extends BaseStream {
   }
 
   protected async getOldFiles(): Promise<string[]> {
-    const { options: { backups }, parsedFilePath: { dir }, filePattern } = this;
+    const { options: { backups }, parsedFilePath: { dir }, fileNameMatcher } = this;
     const files = await readdir(dir);
 
     return files
       .reduce((acc, file) => {
-        const match = filePattern.exec(file);
+        const match = fileNameMatcher.exec(file);
         if (match) {
           acc.push([
             match.slice(1, -1).map((v, i) => (i === 1 ? +v - 1 : +v)),

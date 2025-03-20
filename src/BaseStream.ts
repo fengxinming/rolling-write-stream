@@ -6,6 +6,8 @@ import { Writable } from 'node:stream';
 
 import { lock } from 'proper-lockfile';
 
+import { defaultOptions } from './common';
+
 type WriteStreamWithFD = WriteStream & { fd: number };
 function normalizePath(filePath: string): string {
   if (filePath.startsWith('~')) {
@@ -24,11 +26,11 @@ export default abstract class BaseStream extends Writable {
 
   constructor(
     filePath: string,
-    options: any,
+    options?: any,
   ) {
-    super(options);
+    super(options = Object.assign(defaultOptions(), options));
+    this.options = options;
     this.filePath = normalizePath(filePath);
-    this.options = Object.assign(this.getDefaultOptions(), options);
     this.initialize();
   }
 
@@ -199,7 +201,6 @@ export default abstract class BaseStream extends Writable {
     }
   }
 
-  protected abstract getDefaultOptions(): Record<string, any>;
   protected abstract getOldFiles(): string[] | Promise<string[]>;
   protected abstract rotateFiles(): Promise<void>;
 }

@@ -5,7 +5,7 @@ import { Writable } from 'node:stream';
 import autocannon from 'autocannon';
 import { emptyDirSync } from 'fs-extra';
 
-import FileStream from './src/FileStream';
+import { DateFileStream, FileStream } from './';
 
 const port = 6789;
 const logFilePath = './logs/test.log';
@@ -72,7 +72,7 @@ function createLogServer() {
 
       // autocannon -c 200 -d 20 -m POST -H "Content-Type:text/plain" -b "test-log-data" http://localhost:${port}/log
 
-      console.info('Test FileStream');
+      console.info('Test FileStream\n');
       logStream = new FileStream(logFilePath, {
         maxSize: 1024 * 1024,
         backups: 5
@@ -81,6 +81,16 @@ function createLogServer() {
       emptyDirSync(dirname(logFilePath));
 
       console.info('\n-------------\n');
+
+      console.info('Test DateFileStream\n');
+      logStream = new DateFileStream(logFilePath, {
+        maxSize: 1024 * 1024,
+        backups: 5,
+        pattern: 'YYYYMMDD'
+      });
+      await test();
+      emptyDirSync(dirname(logFilePath));
+
       process.exit(0);
     })
     .on('error', (err) => {
