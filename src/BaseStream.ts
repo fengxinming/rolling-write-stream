@@ -1,4 +1,4 @@
-import { createWriteStream, fsyncSync, mkdirSync, statSync, WriteStream } from 'node:fs';
+import { createWriteStream, fsync, fsyncSync, mkdirSync, statSync, WriteStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve as pathResolve } from 'node:path';
@@ -46,22 +46,11 @@ export default abstract class BaseStream extends Writable {
       // 滚动逻辑
       // Rolling logic
       if (await this.shouldRoll(byteSize)) {
-        if (this.options.useLock) {
-          // 在滚动操作内加锁
-          // Lock during rolling operation
-          const release = await lock(this.filePath, { retries: 3 });
-          try {
-            await this.performRoll();
-          }
-          finally {
-            // 确保锁释放
-            // Make sure the lock is released
-            await release();
-          }
-        }
-        else {
-          await this.performRoll();
-        }
+        // 在滚动操作内加锁
+        // Lock during rolling operation
+        await this.tryLock(() => {
+          return this.performRoll();
+        });
       }
     }
     catch (err) {
@@ -92,8 +81,10 @@ export default abstract class BaseStream extends Writable {
   }
 
   _destroy(error: Error, callback: () => void): void {
-    this.currentFileStream.destroy(error);
-    callback();
+    this.finalSync()
+      .then(() => this.currentFileStream.destroy(error || undefined))
+      .catch((syncErr) => this.emit('error', syncErr))
+      .finally(() => callback());
   }
 
   protected initialize(): void {
@@ -177,6 +168,35 @@ export default abstract class BaseStream extends Writable {
     // 检查单次写入或累积大小是否超过阈值
     // Check if the chunk size or accumulated size exceeds the threshold
     return chunkSize > maxSize || (this.currentSize + chunkSize) > maxSize;
+  }
+
+  private async tryLock(cb: () => Promise<void>): Promise<any> {
+    if (this.options.useLock) {
+      const release = await lock(this.filePath, { retries: 3 });
+      try {
+        return cb();
+      }
+      finally {
+        // 确保锁释放
+        // Make sure the lock is released
+        await release();
+      }
+    }
+    else {
+      return cb();
+    }
+  }
+
+  private finalSync(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const { fd } = this.currentFileStream;
+      if (!fd) {
+        resolve();
+      }
+      else {
+        fsync(fd, (err) => (err ? reject(err) : resolve()));
+      }
+    });
   }
 
   private handleSync(byteSize: number): void {
