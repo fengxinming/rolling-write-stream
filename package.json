@@ -1,6 +1,6 @@
 {
   "name": "rolling-write-stream",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A high-performance Node.js log rolling library supporting size-based and date-based rolling, with compression backup and multi-process safety.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
